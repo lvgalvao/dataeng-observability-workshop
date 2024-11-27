@@ -1,5 +1,11 @@
 ### Observabilidade ETL - Pipeline Completo
 
+## Escalidraw
+
+[Link](https://link.excalidraw.com/l/8pvW6zbNUnD/8YMdUcpuF1M)
+
+##
+
 <p align="center">
   <a href="https://suajornadadedados.com.br/"><img src="https://github.com/lvgalvao/data-engineering-roadmap/raw/main/pics/logo.png" alt="Jornada de Dados"></a>
 </p>
