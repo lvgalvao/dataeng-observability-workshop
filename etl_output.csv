@@ -1,0 +1,11 @@
+Timestamp,Message
+2024-11-27T04:58:15.504696+0000,GET /get
+2024-11-21T22:19:24.120861+0000,"Hello, world!"
+2024-11-21T22:30:15.922393+0000,total size of C:\Users\Luciano\workspace\lvgalvaofilho\hello_world_logfire is 434 bytes
+2024-11-21T22:30:15.919392+0000,counting size of cwd=C:\Users\Luciano\workspace\lvgalvaofilho\hello_world_logfire
+2024-11-21T22:30:15.921393+0000,reading main.py
+2024-11-21T22:32:00.255900+0000,dob=1989-11-28 age=datetime.timedelta(days=12777)
+2024-11-21T22:31:51.771891+0000,Asking the user for their birthday
+2024-11-21T22:20:56.356094+0000,"Workshop, logfire dia 26/11 ás 12h!"
+2024-11-21T22:38:54.884356+0000,Asking the user for their birthday
+2024-11-21T22:19:00.642164+0000,"Hello, world!"

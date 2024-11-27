@@ -184,3 +184,6 @@ Contribuições são bem-vindas! Siga as etapas abaixo para colaborar:
 ---
 
 ### **🚀 Comece sua Jornada de Dados com Observabilidade!**
+
+### Hello word
+
