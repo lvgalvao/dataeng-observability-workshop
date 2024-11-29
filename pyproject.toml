@@ -3,6 +3,10 @@ name = "dataeng-observability-workshop"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12.1"
 dependencies = [
 ]
+
+[tool.taskipy.tasks]
+shell = "opentelemetry-instrument uvicorn hello_world_otel.app.app:app --reload"
+otel-install = "opentelemetry-bootstrap -a install"
