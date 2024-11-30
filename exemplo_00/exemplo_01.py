@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 # Função para simular o lançamento de um dado
 def roll():
+    logger.info("função roll chamada")
     return randint(1, 6)
 
 # Interface Streamlit
