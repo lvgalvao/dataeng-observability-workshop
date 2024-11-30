@@ -17,11 +17,15 @@ Esse workshop faz parte da Jornada de Dados e tem como objetivo mostrar como imp
 
 ## Tópicos
 
-O workshop é separado em 4 etapas:
-- Introdução e Contextualização
-- Introdução ao OpenTelemetry
-- Projeto Logfire, implementação de logs, métricas e traces
-- Gestão de Erros e Exceções, Projeto Prometheus
+- O que é observabilidade
+- História da Open Telemetry
+- Iniciando o nosso projeto
+- Logs e Tracing
+- Contexto e propagação
+- Métricas
+- Projeto Logfire
+- Gestão de Erros e Exceções
+- Projeto Prometheus
 
 ### Agenda detalhada
 9:00 - 9:30 - Apresentação e Contextualização
