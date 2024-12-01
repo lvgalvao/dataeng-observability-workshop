@@ -1,170 +1,155 @@
-# **Pipeline ETL com Instrumentação Automática usando OpenTelemetry**
-
-Este projeto demonstra como criar um pipeline ETL simples com **Python**, incluindo a extração de dados de uma API, transformação usando **Pydantic**, e carregamento dos dados em um banco de dados SQLite usando **SQLAlchemy**. O projeto também apresenta como instrumentar automaticamente o código usando **OpenTelemetry** para monitoramento de métricas e traces.
+### **README Atualizado com Comentários sobre os Pontos em Destaque**
 
 ---
 
-## **Estrutura do Projeto**
+# **ETL Pipeline com Tracing e Banco de Dados PostgreSQL**
 
-### **1. Pipeline ETL Simples**
-O pipeline consiste em três etapas principais:
-1. **Extract**: Faz uma requisição HTTP para uma API pública e retorna os dados.
-2. **Transform**: Valida e transforma os dados recebidos usando Pydantic.
-3. **Load**: Insere os dados validados em um banco de dados SQLite em memória usando SQLAlchemy.
-
-### **2. Instrumentação Automática com OpenTelemetry**
-- Automatiza a coleta de métricas e traces para bibliotecas como **requests** e **SQLAlchemy**.
-- Permite monitorar desempenho e comportamento do pipeline sem modificar diretamente o código.
+Este projeto implementa um pipeline ETL (Extract, Transform, Load) com instrumentação de tracing usando **Logfire** e armazenamento em um banco de dados PostgreSQL remoto. O objetivo é demonstrar como integrar spans para monitorar o desempenho e acompanhar cada etapa do pipeline.
 
 ---
 
-## **Executando o Pipeline ETL Simples**
+## **Destaques do Código**
 
-### **Pré-requisitos**
-1. **Python 3.8 ou superior** instalado.
-2. Instale as dependências:
-   ```bash
-   pip install requests pydantic sqlalchemy
-   ```
+### 1. **Tracing com Spans**
+- O uso de spans no **Logfire** permite monitorar o tempo de execução de cada etapa do pipeline.
+- Exemplos no código:
+  - **Etapa de Extração**:
+    ```python
+    with logfire.span("Fazendo a requisição para obter o valor do Bitcoin"):
+        response = requests.get(url=URL)
+    ```
+    - Este span mede o tempo para realizar a requisição HTTP.
+  - **Etapa de Transformação**:
+    ```python
+    with logfire.span("Validando os dados com Pydantic"):
+        validated_data = ApiResponse(**data)
+    ```
+    - Este span mede o tempo para validar os dados com o modelo **Pydantic**.
+  - **Etapa de Carregamento**:
+    ```python
+    with logfire.span("Carregando os dados no banco de dados PostgreSQL"):
+        session.add(bitcoin_entry)
+        session.commit()
+    ```
+    - Este span mede o tempo para salvar os dados no banco PostgreSQL usando SQLAlchemy.
 
-### **Como Rodar**
-Execute o código do pipeline ETL:
-```bash
-python pipeline.py
-```
-
-### **Explicação do Código**
-
-#### **Extract**
-A função `extract` faz uma requisição HTTP para a API do Coinbase para obter o valor do Bitcoin em dólares. Retorna os dados no formato JSON.
-
-```python
-def extract():
-    response = requests.get(url="https://api.coinbase.com/v2/prices/spot?currency=USD")
-    return response.json()
-```
-
-#### **Transform**
-A função `transform` valida os dados retornados pela API usando o **Pydantic**. Se os dados estiverem no formato esperado, eles são transformados em um dicionário estruturado.
-
-```python
-def transform(data):
-    validated_data = ApiResponse(**data)
-    return validated_data.model_dump()
-```
-
-#### **Load**
-A função `load` insere os dados validados em uma tabela SQLite chamada `bitcoin_data` usando o **SQLAlchemy**.
-
-```python
-def load(data):
-    engine = create_engine("sqlite:///:memory:", echo=False)
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-
-    bitcoin_entry = BitcoinDataModel(
-        amount=data['data']['amount'],
-        base=data['data']['base'],
-        currency=data['data']['currency']
+### 2. **Logs Detalhados**
+- O **Logfire** é usado para gerar logs ricos com contexto adicional. Exemplos incluem:
+  - Mensagem de sucesso na conexão:
+    ```python
+    logfire.info("Conexão bem-sucedida com o banco PostgreSQL.")
+    ```
+  - Dados inseridos no banco:
+    ```python
+    logfire.info(
+        "Dado inserido no banco: {amount} {base}/{currency} em {timestamp}",
+        amount=bitcoin_entry.amount,
+        base=bitcoin_entry.base,
+        currency=bitcoin_entry.currency,
+        timestamp=bitcoin_entry.timestamp,
     )
+    ```
 
-    session.add(bitcoin_entry)
-    session.commit()
+### 3. **Monitoramento do Pipeline Completo**
+- Um span envolve a execução completa do pipeline:
+  ```python
+  with logfire.span("Execução completa do pipeline ETL"):
+      raw_data = extract()
+      transformed_data = transform(raw_data)
+      load(transformed_data)
+  ```
+  - Ele registra quanto tempo o pipeline completo leva para ser executado.
 
-    results = session.query(BitcoinDataModel).all()
-    print("Dados armazenados no SQLite (via SQLAlchemy):")
-    for result in results:
-        print(f"Amount: {result.amount}, Base: {result.base}, Currency: {result.currency}")
-
-    session.close()
-```
+### 4. **Loop Contínuo**
+- O pipeline é executado em um loop contínuo com uma pausa de 10 segundos entre as execuções:
+  ```python
+  while True:
+      with logfire.span("Execução completa do pipeline ETL"):
+          raw_data = extract()
+          transformed_data = transform(raw_data)
+          load(transformed_data)
+          logfire.info("Pipeline concluído. Aguardando 10 segundos antes de repetir.")
+      sleep(10)
+  ```
+- É possível interromper o loop pressionando `Ctrl+C`, capturado pelo seguinte bloco:
+  ```python
+  except KeyboardInterrupt:
+      logfire.info("Execução do pipeline interrompida pelo usuário.")
+  ```
 
 ---
 
-## **Instrumentação Automática com OpenTelemetry**
+## **Passos para Rodar o Projeto**
 
-A instrumentação automática usa o **OpenTelemetry** para capturar métricas e traces sem modificar o código do pipeline. Bibliotecas como **requests** e **SQLAlchemy** são automaticamente instrumentadas para coletar dados de monitoramento.
-
-### **Pré-requisitos**
-1. Instale as dependências do OpenTelemetry:
+1. **Clonar o Repositório**
    ```bash
-   pip install opentelemetry-distro opentelemetry-instrumentation-requests opentelemetry-instrumentation-sqlalchemy
+   git clone https://github.com/seu-repositorio/etl-pipeline-logfire.git
+   cd etl-pipeline-logfire
    ```
 
-2. Configure o nome do serviço e o exportador:
-   ```bash
-   export OTEL_RESOURCE_ATTRIBUTES="service.name=pipeline_etl"
-   export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
-   ```
+2. **Configurar o Ambiente**
+   - Certifique-se de que o Python 3.8+ está instalado.
+   - Crie e ative um ambiente virtual:
+     ```bash
+     python -m venv .venv
+     source .venv/bin/activate  # No Windows: .venv\Scripts\activate
+     ```
 
-### **Como Rodar**
-Execute o pipeline com o comando de instrumentação automática:
-```bash
-opentelemetry-instrument --traces_exporter console --metrics_exporter none python pipeline.py
+3. **Instalar as Dependências**
+   - Instale as bibliotecas necessárias:
+     ```bash
+     pip install requests sqlalchemy logfire pydantic psycopg2
+     ```
+
+4. **Configurar o Banco PostgreSQL**
+   - Configure a URI do PostgreSQL no arquivo:
+     ```python
+     POSTGRES_URI = "postgresql://<USUARIO>:<SENHA>@<HOST>:<PORTA>/<BANCO>"
+     ```
+   - Certifique-se de que o banco de dados está acessível e o usuário tem permissões para criar tabelas.
+
+5. **Executar o Script**
+   - Rode o script:
+     ```bash
+     python main.py
+     ```
+
+6. **Parar o Pipeline**
+   - Use `Ctrl+C` para interromper a execução do pipeline.
+
+---
+
+## **Exemplo de Saída**
+
+### **Logs no Console**
+Você verá logs detalhados para cada etapa:
+```plaintext
+Conexão bem-sucedida com o banco PostgreSQL.
+[Span] Fazendo a requisição para obter o valor do Bitcoin
+[Span] Validando os dados com Pydantic
+[Span] Carregando os dados no banco de dados PostgreSQL
+[Dado inserido no banco: 97231.45 BTC/USD em 2024-12-01 10:30:15]
+[Pipeline concluído. Aguardando 10 segundos antes de repetir.]
 ```
 
 ---
 
-## **O Que Será Monitorado**
+## **Benefícios do Tracing e Logging**
 
-### **Requisições HTTP**
-Traces capturam informações como:
-- Método HTTP (`GET`).
-- URL da API.
-- Código de status da resposta.
+1. **Monitoramento de Desempenho**:
+   - Spans permitem identificar gargalos em cada etapa do pipeline.
+   - Medições precisas do tempo de execução ajudam na otimização.
 
-Exemplo:
-```json
-{
-    "name": "GET",
-    "attributes": {
-        "http.method": "GET",
-        "http.url": "https://api.coinbase.com/v2/prices/spot?currency=USD",
-        "http.status_code": 200
-    }
-}
-```
+2. **Visibilidade do Sistema**:
+   - Logs enriquecidos fornecem informações contextuais sobre o estado do pipeline.
+   - Possibilidade de correlacionar eventos entre diferentes sistemas.
 
-### **Operações SQL**
-Traces capturam detalhes das operações SQL, como:
-- Sistema de banco de dados (`sqlite`).
-- Comandos SQL executados (`INSERT`, `SELECT`).
-- Duração de cada operação.
+3. **Facilidade de Depuração**:
+   - Mensagens detalhadas ajudam a diagnosticar problemas rapidamente.
 
-Exemplo:
-```json
-{
-    "name": "INSERT",
-    "attributes": {
-        "db.system": "sqlite",
-        "db.statement": "INSERT INTO bitcoin_data (amount, base, currency) VALUES (?, ?, ?)"
-    }
-}
-```
+4. **Manutenção e Escalabilidade**:
+   - Tracing oferece uma visão clara do fluxo do sistema, facilitando a manutenção e escalabilidade.
 
 ---
 
-## **Dicas de Monitoramento**
-
-### **Visualização no Console**
-Ao rodar com `--traces_exporter console`, todos os traces serão exibidos diretamente no terminal.
-
-### **Integração com Ferramentas de Observabilidade**
-Para visualizar métricas e traces em ferramentas como **Grafana Tempo** ou **Jaeger**, configure o OpenTelemetry com os exportadores apropriados:
-```bash
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
-opentelemetry-instrument --traces_exporter otlp --metrics_exporter none python pipeline.py
-```
-
----
-
-## **Contribuição**
-
-Sinta-se à vontade para abrir **issues** ou enviar **pull requests** caso encontre problemas ou deseje melhorar este projeto.
-
----
-
-## **Licença**
-
-Este projeto está licenciado sob a MIT License. Consulte o arquivo `LICENSE` para mais informações.
+Com este projeto, você tem uma base robusta para monitorar e otimizar pipelines ETL, além de integrar com ferramentas modernas de observabilidade como **Logfire**. 🚀

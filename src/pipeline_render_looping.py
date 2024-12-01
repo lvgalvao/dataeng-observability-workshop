@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import requests
 from sqlalchemy import create_engine, Column, String, Integer, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
+from time import sleep
 
 # URL da API para buscar o valor atual do Bitcoin
 URL = 'https://api.coinbase.com/v2/prices/spot?currency=USD'
@@ -78,10 +79,15 @@ def load(data):
 
     session.close()
 
-# Testar conexão antes do pipeline
-test_connection()
-
-# Executar o pipeline ETL
-raw_data = extract()
-transformed_data = transform(raw_data)
-load(transformed_data)
+# Loop contínuo do pipeline ETL
+print("Iniciando o loop do pipeline ETL. Pressione Ctrl+C para interromper.")
+try:
+    while True:
+        print("Executando o pipeline ETL...")
+        raw_data = extract()
+        transformed_data = transform(raw_data)
+        load(transformed_data)
+        print("Pipeline concluído. Aguardando 10 segundos...")
+        sleep(10)  # Aguarda 10 segundos antes de repetir
+except KeyboardInterrupt:
+    print("\nExecução interrompida pelo usuário.")
