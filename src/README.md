@@ -1,228 +1,170 @@
-### Arquivo: `pipeline.py`
+# **Pipeline ETL com Instrumentação Automática usando OpenTelemetry**
 
-```python
-from pydantic import BaseModel, ValidationError
-import logfire
-import requests
-
-# Configuração do Logfire para monitoramento e logging
-logfire.configure()
-logfire.instrument_requests()
-
-# URL da API para buscar o valor atual do Bitcoin
-URL = 'https://api.coinbase.com/v2/prices/spot?currency=USD'
-
-# Modelos Pydantic para validação de dados
-class BitcoinData(BaseModel):
-    amount: str
-    base: str
-    currency: str
-
-class ApiResponse(BaseModel):
-    data: BitcoinData
-
-def check_data(data):
-    """
-    Valida os dados recebidos da API usando os modelos Pydantic.
-    
-    :param data: Dicionário com os dados retornados da API.
-    :return: Instância validada de ApiResponse ou None em caso de erro.
-    """
-    try:
-        validated_data = ApiResponse(**data)
-        logfire.info("Data validated successfully.")
-        return validated_data
-    except ValidationError as e:
-        logfire.error(f"Validation error: {e}")
-        return None
-
-def extract():
-    """
-    Faz uma requisição à API para obter o valor do Bitcoin e valida os dados retornados.
-
-    :return: Dicionário com os dados validados ou None se a validação falhar.
-    """
-    try:
-        response = requests.get(url=URL)
-        response.raise_for_status()  # Levanta exceções para erros HTTP
-        data_dict = response.json()
-        validated_data = check_data(data_dict)
-        if validated_data:
-            logfire.info(f"Bitcoin value: {validated_data.dict()}!")
-            return validated_data.dict()
-        else:
-            logfire.warning("Invalid data received. Check the API or validation logic.")
-            return None
-    except Exception as e:
-        logfire.error(f"Error during data extraction: {e}")
-        return None
-
-if __name__ == "__main__":
-    print(extract())
-```
+Este projeto demonstra como criar um pipeline ETL simples com **Python**, incluindo a extração de dados de uma API, transformação usando **Pydantic**, e carregamento dos dados em um banco de dados SQLite usando **SQLAlchemy**. O projeto também apresenta como instrumentar automaticamente o código usando **OpenTelemetry** para monitoramento de métricas e traces.
 
 ---
 
-### Arquivo: `tests_pipeline.py`
+## **Estrutura do Projeto**
 
-```python
-import pytest
-from unittest.mock import patch
-from pipeline import extract, check_data, ApiResponse
+### **1. Pipeline ETL Simples**
+O pipeline consiste em três etapas principais:
+1. **Extract**: Faz uma requisição HTTP para uma API pública e retorna os dados.
+2. **Transform**: Valida e transforma os dados recebidos usando Pydantic.
+3. **Load**: Insere os dados validados em um banco de dados SQLite em memória usando SQLAlchemy.
 
-# Teste 1: Validação de dados corretos
-def test_check_data_valid():
-    valid_data = {
-        "data": {
-            "amount": "97054.355",
-            "base": "BTC",
-            "currency": "USD"
-        }
-    }
-    validated = check_data(valid_data)
-    assert validated is not None
-    assert validated.data.amount == "97054.355"
-    assert validated.data.base == "BTC"
-    assert validated.data.currency == "USD"
-
-# Teste 2: Validação de dados incorretos
-def test_check_data_invalid():
-    invalid_data = {
-        "data": {
-            "base": "BTC",
-            "currency": "USD"
-            # "amount" está ausente
-        }
-    }
-    validated = check_data(invalid_data)
-    assert validated is None
-
-# Teste 3: Extração de dados válidos da API
-@patch("pipeline.requests.get")
-def test_extract_valid(mock_get):
-    mock_get.return_value.json.return_value = {
-        "data": {
-            "amount": "97054.355",
-            "base": "BTC",
-            "currency": "USD"
-        }
-    }
-    result = extract()
-    assert result is not None
-    assert result["data"]["amount"] == "97054.355"
-    assert result["data"]["base"] == "BTC"
-    assert result["data"]["currency"] == "USD"
-
-# Teste 4: Extração de dados inválidos da API
-@patch("pipeline.requests.get")
-def test_extract_invalid(mock_get):
-    mock_get.return_value.json.return_value = {
-        "data": {
-            "base": "BTC",
-            "currency": "USD"
-            # "amount" está ausente
-        }
-    }
-    result = extract()
-    assert result is None
-
-# Teste 5: Erro de conexão na API
-@patch("pipeline.requests.get")
-def test_extract_api_error(mock_get):
-    mock_get.side_effect = Exception("API error")
-    result = extract()
-    assert result is None
-```
+### **2. Instrumentação Automática com OpenTelemetry**
+- Automatiza a coleta de métricas e traces para bibliotecas como **requests** e **SQLAlchemy**.
+- Permite monitorar desempenho e comportamento do pipeline sem modificar diretamente o código.
 
 ---
 
-### Explicação do Código
+## **Executando o Pipeline ETL Simples**
 
-#### `pipeline.py`
+### **Pré-requisitos**
+1. **Python 3.8 ou superior** instalado.
+2. Instale as dependências:
+   ```bash
+   pip install requests pydantic sqlalchemy
+   ```
 
-1. **Configuração do Logfire**:
-   - `logfire.configure()` e `logfire.instrument_requests()` inicializam o monitoramento e o logging de requisições.
-
-2. **Validação de Dados com Pydantic**:
-   - `BitcoinData` e `ApiResponse` definem a estrutura esperada dos dados da API.
-   - A função `check_data` valida os dados recebidos contra esses modelos, garantindo consistência e integridade.
-
-3. **Extração de Dados**:
-   - `extract` faz a requisição à API e valida os dados.
-   - Em caso de erro na API ou dados inválidos, mensagens apropriadas são registradas nos logs.
-
-#### `tests_pipeline.py`
-
-1. **Testes para `check_data`**:
-   - `test_check_data_valid`: Confirma que dados válidos passam pela validação.
-   - `test_check_data_invalid`: Garante que dados ausentes ou malformados falhem na validação.
-
-2. **Testes para `extract`**:
-   - `test_extract_valid`: Simula uma resposta válida da API e verifica que a função retorna os dados corretamente.
-   - `test_extract_invalid`: Testa se a função lida adequadamente com dados inválidos da API.
-   - `test_extract_api_error`: Simula uma exceção no `requests.get` e garante que a função trate o erro.
-
----
-
-### Estrutura do Projeto
-
-```plaintext
-project/
-├── pipeline.py          # Código principal
-├── tests_pipeline.py    # Testes unitários
-└── requirements.txt     # Dependências
-```
-
----
-
-### Dependências
-
-Crie um arquivo `requirements.txt` com as seguintes linhas:
-
-```plaintext
-pytest
-pytest-mock
-pydantic
-logfire
-requests
-```
-
-Instale as dependências:
-
+### **Como Rodar**
+Execute o código do pipeline ETL:
 ```bash
-pip install -r requirements.txt
+python pipeline.py
+```
+
+### **Explicação do Código**
+
+#### **Extract**
+A função `extract` faz uma requisição HTTP para a API do Coinbase para obter o valor do Bitcoin em dólares. Retorna os dados no formato JSON.
+
+```python
+def extract():
+    response = requests.get(url="https://api.coinbase.com/v2/prices/spot?currency=USD")
+    return response.json()
+```
+
+#### **Transform**
+A função `transform` valida os dados retornados pela API usando o **Pydantic**. Se os dados estiverem no formato esperado, eles são transformados em um dicionário estruturado.
+
+```python
+def transform(data):
+    validated_data = ApiResponse(**data)
+    return validated_data.model_dump()
+```
+
+#### **Load**
+A função `load` insere os dados validados em uma tabela SQLite chamada `bitcoin_data` usando o **SQLAlchemy**.
+
+```python
+def load(data):
+    engine = create_engine("sqlite:///:memory:", echo=False)
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    bitcoin_entry = BitcoinDataModel(
+        amount=data['data']['amount'],
+        base=data['data']['base'],
+        currency=data['data']['currency']
+    )
+
+    session.add(bitcoin_entry)
+    session.commit()
+
+    results = session.query(BitcoinDataModel).all()
+    print("Dados armazenados no SQLite (via SQLAlchemy):")
+    for result in results:
+        print(f"Amount: {result.amount}, Base: {result.base}, Currency: {result.currency}")
+
+    session.close()
 ```
 
 ---
 
-### Instruções para Rodar o Projeto
+## **Instrumentação Automática com OpenTelemetry**
 
-1. **Configurar o Ambiente**:
-   - Certifique-se de estar na raiz do projeto.
-   - Exporte o `PYTHONPATH` (se necessário):
-     ```bash
-     export PYTHONPATH=.
-     ```
+A instrumentação automática usa o **OpenTelemetry** para capturar métricas e traces sem modificar o código do pipeline. Bibliotecas como **requests** e **SQLAlchemy** são automaticamente instrumentadas para coletar dados de monitoramento.
 
-2. **Executar o Script**:
-   - Para executar o script principal:
-     ```bash
-     python pipeline.py
-     ```
+### **Pré-requisitos**
+1. Instale as dependências do OpenTelemetry:
+   ```bash
+   pip install opentelemetry-distro opentelemetry-instrumentation-requests opentelemetry-instrumentation-sqlalchemy
+   ```
 
-3. **Executar os Testes**:
-   - Use o comando abaixo para rodar todos os testes:
-     ```bash
-     pytest -v tests_pipeline.py
-     ```
+2. Configure o nome do serviço e o exportador:
+   ```bash
+   export OTEL_RESOURCE_ATTRIBUTES="service.name=pipeline_etl"
+   export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
+   ```
 
-4. **Resultados Esperados**:
-   - Os testes devem passar, validando que o código lida corretamente com cenários de sucesso, falha e exceções.
+### **Como Rodar**
+Execute o pipeline com o comando de instrumentação automática:
+```bash
+opentelemetry-instrument --traces_exporter console --metrics_exporter none python pipeline.py
+```
 
 ---
 
-### Como um Engenheiro de Software Senior Validaria
-- **Modularidade**: Cada função tem uma responsabilidade bem definida, seguindo o princípio SRP (Single Responsibility Principle).
-- **Robustez**: Uso de Pydantic para validação garante que erros nos dados sejam capturados rapidamente.
-- **Testabilidade**: O código é testável devido ao uso de mocks para simular respostas da API.
-- **Logging**: Logs detalhados tornam o monitoramento e a depuração mais eficientes.
+## **O Que Será Monitorado**
+
+### **Requisições HTTP**
+Traces capturam informações como:
+- Método HTTP (`GET`).
+- URL da API.
+- Código de status da resposta.
+
+Exemplo:
+```json
+{
+    "name": "GET",
+    "attributes": {
+        "http.method": "GET",
+        "http.url": "https://api.coinbase.com/v2/prices/spot?currency=USD",
+        "http.status_code": 200
+    }
+}
+```
+
+### **Operações SQL**
+Traces capturam detalhes das operações SQL, como:
+- Sistema de banco de dados (`sqlite`).
+- Comandos SQL executados (`INSERT`, `SELECT`).
+- Duração de cada operação.
+
+Exemplo:
+```json
+{
+    "name": "INSERT",
+    "attributes": {
+        "db.system": "sqlite",
+        "db.statement": "INSERT INTO bitcoin_data (amount, base, currency) VALUES (?, ?, ?)"
+    }
+}
+```
+
+---
+
+## **Dicas de Monitoramento**
+
+### **Visualização no Console**
+Ao rodar com `--traces_exporter console`, todos os traces serão exibidos diretamente no terminal.
+
+### **Integração com Ferramentas de Observabilidade**
+Para visualizar métricas e traces em ferramentas como **Grafana Tempo** ou **Jaeger**, configure o OpenTelemetry com os exportadores apropriados:
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
+opentelemetry-instrument --traces_exporter otlp --metrics_exporter none python pipeline.py
+```
+
+---
+
+## **Contribuição**
+
+Sinta-se à vontade para abrir **issues** ou enviar **pull requests** caso encontre problemas ou deseje melhorar este projeto.
+
+---
+
+## **Licença**
+
+Este projeto está licenciado sob a MIT License. Consulte o arquivo `LICENSE` para mais informações.
