@@ -28,15 +28,15 @@ Esse workshop faz parte da Jornada de Dados e tem como objetivo mostrar como imp
 - Projeto Prometheus
 
 ### Agenda detalhada
-9:00 - 9:30 - Apresentação e Contextualização
-9:30 - 10:30 - Introdução ao OpenTelemetry
-10:30 - 12:30 - Projeto Logfire, implementação de logs, métricas e traces
-12:30 - 13:30 - Pausa para o almoço
-13:30 - 16:00 - Gestão de Erros e Exceções, Projeto Prometheus
+- 9:00 - 9:30 - Apresentação e Contextualização
+- 9:30 - 10:30 - Introdução ao OpenTelemetry
+- 10:30 - 12:00 - Projeto Logfire, implementação de logs, métricas e traces
+- 12:00 - 13:00 - Pausa para o almoço
+- 13:00 - 16:00 - Gestão de Erros e Exceções, Projeto Prometheus
 
 ## Escalidraw
 
-[Link](https://link.excalidraw.com/l/8pvW6zbNUnD/8YMdUcpuF1M)
+[![Escalidraw](./pics/excalidraw.png)](https://link.excalidraw.com/l/8pvW6zbNUnD/8YMdUcpuF1M)
 
 ## Contexto
 
